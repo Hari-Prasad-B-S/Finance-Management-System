@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTrack - Personal Finance Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .balance-card h3 {
+            color: white;
+        }
+
+        .balance-amount {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .transaction-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .transaction-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .transaction-item:hover {
+            background: #e9ecef;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .transaction-category {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .transaction-amount {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .transaction-amount.income {
+            color: #48bb78;
+        }
+
+        .transaction-amount.expense {
+            color: #f56565;
+        }
+
+        .delete-btn {
+            background: #f56565;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #e53e3e;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .quick-action-btn {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .quick-action-btn:hover {
+            background: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-warning {
+            background: #fef5e7;
+            color: #744210;
+            border: 1px solid #f6e05e;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .balance-amount {
+                font-size: 2rem;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 FinTrack</h1>
+            <p>Take control of your finances with smart tracking and insights</p>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="dashboard">
+            <!-- Balance Overview -->
+            <div class="card balance-card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    Current Balance
+                </h3>
+                <div class="balance-amount" id="balance">$0.00</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalIncome">$0.00</span>
+                        <span class="stat-label">Total Income</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalExpenses">$0.00</span>
+                        <span class="stat-label">Total Expenses</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="transactionCount">0</span>
+                        <span class="stat-label">Transactions</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="avgTransaction">$0.00</span>
+                        <span class="stat-label">Avg Transaction</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Transaction -->
+            <div class="card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    Add Transaction
+                </h3>
+                <form id="transactionForm">
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <input type="text" id="description" required placeholder="e.g., Grocery shopping">
+                    </div>
+                    <div class="form-group">
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="type">Type</label>
+                        <select id="type" required>
+                            <option value="">Select type</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" required>
+                            <option value="">Select category</option>
+                            <option value="food">Food & Dining</option>
+                            <option value="transport">Transportation</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="salary">Salary</option>
+                            <option value="freelance">Freelance</option>
+                            <option value="investment">Investment</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">Add Transaction</button>
+                </form>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                    Recent Transactions
+                </h3>
+                <div class="transaction-list" id="transactionList">
+                    <div style="text-align: center; color: #718096; padding: 40px;">
+                        No transactions yet. Add your first transaction above!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spending by Category -->
+            <div class="card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/></svg>
+                    Spending by Category
+                </h3>
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    Quick Actions
+                </h3>
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="clearAllTransactions()">Clear All</button>
+                    <button class="quick-action-btn" onclick="exportData()">Export Data</button>
+                    <button class="quick-action-btn" onclick="showMonthlyReport()">Monthly Report</button>
+                    <button class="quick-action-btn" onclick="setBudgetGoal()">Set Budget</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        let transactions = JSON.parse(localStorage.getItem('fintrack_transactions')) || [];
+        let budgetGoal = parseFloat(localStorage.getItem('fintrack_budget')) || 0;
+        let categoryChart = null;
+
+        // DOM elements
+        const transactionForm = document.getElementById('transactionForm');
+        const transactionList = document.getElementById('transactionList');
+        const balanceEl = document.getElementById('balance');
+        const totalIncomeEl = document.getElementById('totalIncome');
+        const totalExpensesEl = document.getElementById('totalExpenses');
+        const transactionCountEl = document.getElementById('transactionCount');
+        const avgTransactionEl = document.getElementById('avgTransaction');
+        const alertsEl = document.getElementById('alerts');
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDashboard();
+            updateTransactionList();
+            initializeChart();
+            showWelcomeMessage();
+        });
+
+        // Form submission
+        transactionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+            const category = document.getElementById('category').value;
+            
+            if (!description || !amount || !type || !category) {
+                showAlert('Please fill in all fields', 'warning');
+                return;
+            }
+
+            const transaction = {
+                id: Date.now(),
+                description,
+                amount,
+                type,
+                category,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            transactions.unshift(transaction);
+            saveTransactions();
+            updateDashboard();
+            updateTransactionList();
+            updateChart();
+            
+            transactionForm.reset();
+            showAlert('Transaction added successfully!', 'success');
+            
+            // Check budget if it's an expense
+            if (type === 'expense') {
+                checkBudget();
+            }
+        });
+
+        // Update dashboard statistics
+        function updateDashboard() {
+            const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const expenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const balance = income - expenses;
+            const avgTransaction = transactions.length > 0 ? (income + expenses) / transactions.length : 0;
+
+            balanceEl.textContent = formatCurrency(balance);
+            totalIncomeEl.textContent = formatCurrency(income);
+            totalExpensesEl.textContent = formatCurrency(expenses);
+            transactionCountEl.textContent = transactions.length;
+            avgTransactionEl.textContent = formatCurrency(avgTransaction);
+
+            // Update balance card color based on balance
+            const balanceCard = balanceEl.closest('.balance-card');
+            if (balance < 0) {
+                balanceCard.style.background = 'linear-gradient(135deg, #f56565, #e53e3e)';
+            } else {
+                balanceCard.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+            }
+        }
+
+        // Update transaction list
+        function updateTransactionList() {
+            if (transactions.length === 0) {
+                transactionList.innerHTML = '<div style="text-align: center; color: #718096; padding: 40px;">No transactions yet. Add your first transaction above!</div>';
+                return;
+            }
+
+            const html = transactions.slice(0, 10).map(transaction => `
+                <div class="transaction-item fade-in">
+                    <div class="transaction-info">
+                        <div class="transaction-title">${transaction.description}</div>
+                        <div class="transaction-category">${transaction.category} • ${transaction.date}</div>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <div class="transaction-amount ${transaction.type}">
+                            ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
+                        </div>
+                        <button class="delete-btn" onclick="deleteTransaction(${transaction.id})">×</button>
+                    </div>
+                </div>
+            `).join('');
+
+            transactionList.innerHTML = html;
+        }
+
+        // Initialize chart
+        function initializeChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                            '#4BC0C0', '#FF6384'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+            updateChart();
+        }
+
+        // Update chart data
+        function updateChart() {
+            const expenses = transactions.filter(t => t.type === 'expense');
+            const categoryData = {};
+            
+            expenses.forEach(transaction => {
+                if (categoryData[transaction.category]) {
+                    categoryData[transaction.category] += transaction.amount;
+                } else {
+                    categoryData[transaction.category] = transaction.amount;
+                }
+            });
+
+            const labels = Object.keys(categoryData);
+            const data = Object.values(categoryData);
+
+            categoryChart.data.labels = labels;
+            categoryChart.data.datasets[0].data = data;
+            categoryChart.update();
+        }
+
+        // Delete transaction
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveTransactions();
+            updateDashboard();
+            updateTransactionList();
+            updateChart();
+            showAlert('Transaction deleted', 'success');
+        }
+
+        // Save transactions to localStorage
+        function saveTransactions() {
+            localStorage.setItem('fintrack_transactions', JSON.stringify(transactions));
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(Math.abs(amount));
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} fade-in`;
+            alertDiv.textContent = message;
+            
+            alertsEl.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Quick actions
+        function clearAllTransactions() {
+            if (confirm('Are you sure you want to clear all transactions? This action cannot be undone.')) {
+                transactions = [];
+                saveTransactions();
+                updateDashboard();
+                updateTransactionList();
+                updateChart();
+                showAlert('All transactions cleared', 'success');
+            }
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(transactions, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `fintrack_export_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            showAlert('Data exported successfully!', 'success');
+        }
+
+        function showMonthlyReport() {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const monthlyTransactions = transactions.filter(t => {
+                const transactionDate = new Date(t.date);
+                return transactionDate.getMonth() === currentMonth && transactionDate.getFullYear() === currentYear;
+            });
+
+            const monthlyIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const monthlyExpenses = monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const monthlyBalance = monthlyIncome - monthlyExpenses;
+
+            alert(`Monthly Report for ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}:\n\nIncome: ${formatCurrency(monthlyIncome)}\nExpenses: ${formatCurrency(monthlyExpenses)}\nNet: ${formatCurrency(monthlyBalance)}\nTransactions: ${monthlyTransactions.length}`);
+        }
+
+        function setBudgetGoal() {
+            const budget = prompt('Enter your monthly budget goal:');
+            if (budget && !isNaN(budget)) {
+                budgetGoal = parseFloat(budget);
+                localStorage.setItem('fintrack_budget', budgetGoal.toString());
+                showAlert('Budget goal set successfully!', 'success');
+                checkBudget();
+            }
+        }
+
+        function checkBudget() {
+            if (budgetGoal > 0) {
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                const monthlyExpenses = transactions.filter(t => {
+                    const transactionDate = new Date(t.date);
+                    return t.type === 'expense' && transactionDate.getMonth() === currentMonth && transactionDate.getFullYear() === currentYear;
+                }).reduce((sum, t) => sum + t.amount, 0);
+
+                const budgetUsed = (monthlyExpenses / budgetGoal) * 100;
+                
+                if (budgetUsed >= 90) {
+                    showAlert(`Warning: You've used ${budgetUsed.toFixed(1)}% of your monthly budget!`, 'warning');
+                }
+            }
+        }
+
+        function showWelcomeMessage() {
+            if (transactions.length === 0) {
+                setTimeout(() => {
+                    showAlert('Welcome to FinTrack! Start by adding your first transaction.', 'success');
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>

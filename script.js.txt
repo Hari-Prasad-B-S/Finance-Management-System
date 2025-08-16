@@ -1,0 +1,245 @@
+// App State
+let transactions = JSON.parse(localStorage.getItem('fintrack_transactions')) || [];
+let budgetGoal = parseFloat(localStorage.getItem('fintrack_budget')) || 0;
+let categoryChart = null;
+
+// DOM Elements
+const transactionForm = document.getElementById('transactionForm');
+const transactionList = document.getElementById('transactionList');
+const balanceEl = document.getElementById('balance');
+const totalIncomeEl = document.getElementById('totalIncome');
+const totalExpensesEl = document.getElementById('totalExpenses');
+const transactionCountEl = document.getElementById('transactionCount');
+const avgTransactionEl = document.getElementById('avgTransaction');
+const alertsEl = document.getElementById('alerts');
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    updateDashboard();
+    updateTransactionList();
+    initializeChart();
+    showWelcomeMessage();
+});
+
+// Add Transaction
+transactionForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const description = document.getElementById('description').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const type = document.getElementById('type').value;
+    const category = document.getElementById('category').value;
+
+    if (!description || !amount || !type || !category) {
+        showAlert('Please fill in all fields', 'warning');
+        return;
+    }
+
+    const transaction = {
+        id: Date.now(),
+        description,
+        amount,
+        type,
+        category,
+        date: new Date().toISOString().split('T')[0]
+    };
+
+    transactions.unshift(transaction);
+    saveTransactions();
+    updateDashboard();
+    updateTransactionList();
+    updateChart();
+    transactionForm.reset();
+    showAlert('Transaction added!', 'success');
+
+    if (type === 'expense') checkBudget();
+});
+
+// Dashboard Stats
+function updateDashboard() {
+    const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const expenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const balance = income - expenses;
+    const avgTransaction = transactions.length > 0 ? (income + expenses) / transactions.length : 0;
+
+    balanceEl.textContent = formatCurrency(balance);
+    totalIncomeEl.textContent = formatCurrency(income);
+    totalExpensesEl.textContent = formatCurrency(expenses);
+    transactionCountEl.textContent = transactions.length;
+    avgTransactionEl.textContent = formatCurrency(avgTransaction);
+
+    const balanceCard = balanceEl.closest('.balance-card');
+    if (balance < 0) {
+        balanceCard.style.background = 'linear-gradient(135deg, #f56565, #e53e3e)';
+    } else {
+        balanceCard.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+    }
+}
+
+// Transaction List
+function updateTransactionList() {
+    if (transactions.length === 0) {
+        transactionList.innerHTML = '<div style="text-align:center; color:#718096; padding:20px;">No transactions yet.</div>';
+        return;
+    }
+
+    transactionList.innerHTML = transactions.slice(0, 10).map(t => `
+        <div class="transaction-item">
+            <div>
+                <div class="transaction-title">${t.description}</div>
+                <div class="transaction-category">${t.category} • ${t.date}</div>
+            </div>
+            <div style="display:flex; align-items:center;">
+                <div class="transaction-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}</div>
+                <button class="delete-btn" onclick="deleteTransaction(${t.id})">×</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Chart Init
+function initializeChart() {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    categoryChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                    '#9966FF', '#FF9F40', '#C9CBCF', '#4BC0C0'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+    updateChart();
+}
+
+// Update Chart
+function updateChart() {
+    const expenses = transactions.filter(t => t.type === 'expense');
+    const categoryData = {};
+    expenses.forEach(t => {
+        categoryData[t.category] = (categoryData[t.category] || 0) + t.amount;
+    });
+
+    categoryChart.data.labels = Object.keys(categoryData);
+    categoryChart.data.datasets[0].data = Object.values(categoryData);
+    categoryChart.update();
+}
+
+// Delete Transaction
+function deleteTransaction(id) {
+    transactions = transactions.filter(t => t.id !== id);
+    saveTransactions();
+    updateDashboard();
+    updateTransactionList();
+    updateChart();
+    showAlert('Transaction deleted', 'success');
+}
+
+// Save to LocalStorage
+function saveTransactions() {
+    localStorage.setItem('fintrack_transactions', JSON.stringify(transactions));
+}
+
+// Format Currency
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(Math.abs(amount));
+}
+
+// Show Alert
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    alertsEl.appendChild(alertDiv);
+    setTimeout(() => alertDiv.remove(), 3000);
+}
+
+// Quick Actions
+function clearAllTransactions() {
+    if (confirm('Clear all transactions?')) {
+        transactions = [];
+        saveTransactions();
+        updateDashboard();
+        updateTransactionList();
+        updateChart();
+        showAlert('All transactions cleared', 'success');
+    }
+}
+
+function exportData() {
+    const dataStr = JSON.stringify(transactions, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `fintrack-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    showAlert('Data exported!', 'success');
+}
+
+function showMonthlyReport() {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthly = transactions.filter(t => {
+        const date = new Date(t.date);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    });
+    const income = monthly.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const expenses = monthly.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const net = income - expenses;
+
+    alert(`Monthly Report for ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}:\n\nIncome: ${formatCurrency(income)}\nExpenses: ${formatCurrency(expenses)}\nNet: ${formatCurrency(net)}\nTransactions: ${monthly.length}`);
+}
+
+function setBudgetGoal() {
+    const budget = prompt('Enter your monthly budget:');
+    if (budget && !isNaN(budget)) {
+        budgetGoal = parseFloat(budget);
+        localStorage.setItem('fintrack_budget', budgetGoal.toString());
+        showAlert('Budget goal set!', 'success');
+        checkBudget();
+    }
+}
+
+function checkBudget() {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const spent = transactions.filter(t => {
+        const date = new Date(t.date);
+        return t.type === 'expense' && date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    }).reduce((sum, t) => sum + t.amount, 0);
+
+    const used = (spent / budgetGoal) * 100;
+    if (budgetGoal > 0 && used >= 90) {
+        showAlert(`⚠️ You've used ${used.toFixed(1)}% of your budget!`, 'warning');
+    }
+}
+
+function showWelcomeMessage() {
+    if (transactions.length === 0) {
+        setTimeout(() => {
+            showAlert('Welcome to FinTrack! Start by adding a transaction.', 'success');
+        }, 1000);
+    }
+}

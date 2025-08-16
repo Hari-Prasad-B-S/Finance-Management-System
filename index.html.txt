@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FinTrack - Personal Finance Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💰 FinTrack</h1>
+      <p>Take control of your finances with smart tracking and insights</p>
+    </div>
+
+    <div id="alerts"></div>
+
+    <div class="dashboard">
+      <!-- Balance Card -->
+      <div class="card balance-card">
+        <h3>Current Balance</h3>
+        <div class="balance-amount" id="balance">$0.00</div>
+        <div class="stats-grid">
+          <div class="stat-item"><span class="stat-value" id="totalIncome">$0.00</span><span class="stat-label">Total Income</span></div>
+          <div class="stat-item"><span class="stat-value" id="totalExpenses">$0.00</span><span class="stat-label">Total Expenses</span></div>
+          <div class="stat-item"><span class="stat-value" id="transactionCount">0</span><span class="stat-label">Transactions</span></div>
+          <div class="stat-item"><span class="stat-value" id="avgTransaction">$0.00</span><span class="stat-label">Avg Transaction</span></div>
+        </div>
+      </div>
+
+      <!-- Transaction Form -->
+      <div class="card">
+        <h3>Add Transaction</h3>
+        <form id="transactionForm">
+          <div class="form-group"><label>Description</label><input type="text" id="description" required /></div>
+          <div class="form-group"><label>Amount</label><input type="number" id="amount" step="0.01" required /></div>
+          <div class="form-group"><label>Type</label>
+            <select id="type" required>
+              <option value="">Select type</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Category</label>
+            <select id="category" required>
+              <option value="">Select category</option>
+              <option value="food">Food</option>
+              <option value="transport">Transport</option>
+              <option value="utilities">Utilities</option>
+              <option value="entertainment">Entertainment</option>
+              <option value="shopping">Shopping</option>
+              <option value="salary">Salary</option>
+              <option value="freelance">Freelance</option>
+              <option value="investment">Investment</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <button class="btn">Add Transaction</button>
+        </form>
+      </div>
+
+      <!-- Transactions -->
+      <div class="card">
+        <h3>Recent Transactions</h3>
+        <div class="transaction-list" id="transactionList">No transactions yet.</div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card">
+        <h3>Spending by Category</h3>
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <h3>Quick Actions</h3>
+        <div class="quick-actions">
+          <button class="quick-action-btn" onclick="clearAllTransactions()">Clear All</button>
+          <button class="quick-action-btn" onclick="exportData()">Export Data</button>
+          <button class="quick-action-btn" onclick="showMonthlyReport()">Monthly Report</button>
+          <button class="quick-action-btn" onclick="setBudgetGoal()">Set Budget</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
